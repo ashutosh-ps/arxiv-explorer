@@ -1,70 +1,224 @@
-# Getting Started with Create React App
+# arXiv Explorer
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern, brutalist-style web application for exploring and searching academic papers from arXiv.org. Built with React.js, featuring a clean black & white design, advanced search capabilities, and seamless user experience.
 
-## Available Scripts
+![arXiv Explorer](https://img.shields.io/badge/React-18.x-61DAFB?style=flat&logo=react)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Status](https://img.shields.io/badge/Status-Active-success)
 
-In the project directory, you can run:
+## 🚀 Features
 
-### `npm start`
+### Core Functionality
+- **7 Search Types**: All fields, Title, Author, Category, Abstract, Advanced queries, and Direct ID lookup
+- **Phrase-Matching Optimization**: Intelligent query parsing with automatic quote wrapping for exact phrase searches
+- **16+ Academic Categories**: Browse papers across Computer Science, Physics, Mathematics, Economics, Biology, and more
+- **Personal Library**: Bookmark papers and track reading history with LocalStorage persistence
+- **Dark/Light Mode**: Full theme support with instant toggle and system preference detection
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Modern UI/UX
+- **Brutalist Design**: Clean black & white aesthetic with sharp corners and 3D hover effects
+- **80+ Lucide Icons**: Professional icon library replacing traditional emojis
+- **Responsive Layout**: Optimized for desktop, tablet, and mobile devices
+- **3D Interactions**: Cuboid hover effects using CSS transforms and box-shadow
+- **Smooth Animations**: Polished transitions throughout the interface
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Technical Highlights
+- **CORS Solution**: Integrated proxy service for seamless cross-origin API requests
+- **XML Parsing**: Efficient DOMParser implementation for arXiv's Atom feed format
+- **Client-Side Storage**: No backend required - all data persisted in browser
+- **Component Architecture**: 15+ reusable React components with clean separation of concerns
 
-### `npm test`
+## 🛠️ Tech Stack
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **Frontend**: React 18.x, React Router v6
+- **Styling**: CSS3 with CSS Variables, CSS Transforms
+- **Icons**: Lucide React
+- **API**: arXiv API (export.arxiv.org)
+- **State Management**: React Context API, LocalStorage
+- **Build Tool**: Create React App
+- **Proxy**: AllOrigins API for CORS handling
 
-### `npm run build`
+## 📦 Installation
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Prerequisites
+- Node.js (v14 or higher)
+- npm or yarn
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Setup
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. **Clone the repository**
+```bash
+git clone https://github.com/yourusername/arxiv-explorer.git
+cd arxiv-explorer
+```
 
-### `npm run eject`
+2. **Install dependencies**
+```bash
+npm install
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+3. **Start development server**
+```bash
+npm start
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+The app will open at [http://localhost:3000](http://localhost:3000)
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+4. **Build for production**
+```bash
+npm run build
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 🎯 Usage
 
-## Learn More
+### Search for Papers
+1. Navigate to the **Search** page
+2. Select your search type (Title, Author, Category, etc.)
+3. Enter your query (e.g., "Attention Is All You Need")
+4. Apply filters for results per page and sorting options
+5. Click on any paper to view full details
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Browse Categories
+1. Visit the **Categories** page
+2. Click on any category card to explore papers in that field
+3. Each category shows recent papers with full metadata
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Manage Your Library
+1. Bookmark papers by clicking the star icon
+2. View all bookmarked papers in **My Library** → Bookmarks
+3. Check your reading history in **My Library** → History
+4. Clear history anytime with one click
 
-### Code Splitting
+### Dark Mode
+- Toggle dark/light mode using the moon/sun icon in the header
+- Theme preference is automatically saved
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 🏗️ Project Structure
 
-### Analyzing the Bundle Size
+```
+arxiv-explorer/
+├── public/
+│   ├── index.html
+│   └── manifest.json
+├── src/
+│   ├── components/
+│   │   ├── Header.js          # Navigation header with search and theme toggle
+│   │   ├── PaperCard.js       # Paper preview card component
+│   │   └── PaperModal.js      # Full paper details modal
+│   ├── context/
+│   │   └── DarkModeContext.js # Theme state management
+│   ├── data/
+│   │   └── categories.js      # Academic category definitions
+│   ├── pages/
+│   │   ├── HomePage.js        # Landing page with featured papers
+│   │   ├── SearchPage.js      # Advanced search interface
+│   │   ├── CategoriesPage.js  # Category browser and detail views
+│   │   └── LibraryPage.js     # Bookmarks and history management
+│   ├── services/
+│   │   ├── arxivApi.js        # arXiv API integration layer
+│   │   └── storageService.js  # LocalStorage wrapper functions
+│   ├── App.js                 # Main app component with routing
+│   ├── styles.css             # Global brutalist design system
+│   └── index.js               # App entry point
+├── package.json
+└── README.md
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## 🔑 Key Features Explained
 
-### Making a Progressive Web App
+### Phrase-Matching Search
+The app intelligently wraps multi-word queries in quotes to ensure exact phrase matching:
+- Query: `Attention Is All You Need`
+- API: `ti:"Attention Is All You Need"`
+- Result: Exact title match instead of OR-separated terms
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### 3D Hover Effects
+Using CSS transforms and box-shadow to create cuboid depth:
+```css
+.card:hover {
+  transform: translate(4px, 4px);
+  box-shadow: -4px -4px 0 var(--border-color);
+}
+```
 
-### Advanced Configuration
+### CORS Proxy Solution
+Since arXiv API doesn't support CORS, we use AllOrigins:
+```javascript
+const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(arxivUrl)}`;
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## 🎨 Design System
 
-### Deployment
+### Color Scheme
+- **Light Mode**: White background (#ffffff), Black text (#000000)
+- **Dark Mode**: Black background (#000000), White text (#ffffff)
+- **Borders**: 2px solid, 0 border-radius for sharp corners
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Typography
+- System font stack for optimal performance
+- Clear hierarchy with size and weight variations
 
-### `npm run build` fails to minify
+### Icons
+- Lucide React icons throughout
+- Consistent 16px-48px sizing based on context
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## 🚧 Development
+
+### Available Scripts
+
+- `npm start` - Run development server
+- `npm run build` - Create production build
+- `npm test` - Run test suite (when configured)
+
+### Code Style
+- Functional React components with Hooks
+- Component-based architecture
+- CSS Variables for theming
+- Clean, commented code
+
+## 📝 API Reference
+
+The app uses the [arXiv API](https://arxiv.org/help/api/index):
+
+**Base URL**: `https://export.arxiv.org/api/query`
+
+**Search Query Prefixes**:
+- `all:` - Search all fields
+- `ti:` - Search titles
+- `au:` - Search authors
+- `abs:` - Search abstracts
+- `cat:` - Search categories
+
+**Example Query**:
+```
+https://export.arxiv.org/api/query?search_query=ti:"Machine Learning"&start=0&max_results=10
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- [arXiv.org](https://arxiv.org) for providing the free API and academic paper archive
+- [Lucide Icons](https://lucide.dev/) for the beautiful icon library
+- [AllOrigins](https://allorigins.win/) for CORS proxy service
+- [Create React App](https://create-react-app.dev/) for the project setup
+
+## 📧 Contact
+
+For questions or feedback, please open an issue on GitHub.
+
+---
+
+**Note**: This is a frontend-only application. All data is fetched from arXiv's public API and stored locally in your browser. No backend server is required.
