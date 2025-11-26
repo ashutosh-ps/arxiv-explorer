@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Settings, Loader, FileSearch, FileEdit } from 'lucide-react';
+import { Search, Settings, Loader, FileSearch, FileEdit, Calendar } from 'lucide-react';
 import {
   searchAllFields,
   searchByTitle,
   searchByAuthor,
   searchByCategory,
   searchByAbstract,
-  advancedSearch
+  advancedSearch,
+  searchByDateRange
 } from '../services/arxivApi';
 import PaperCard from '../components/PaperCard';
 import PaperModal from '../components/PaperModal';
@@ -24,6 +25,9 @@ const SearchPage = () => {
   const [maxResults, setMaxResults] = useState(20);
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [useDateRange, setUseDateRange] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
     const q = searchParams.get('q');
@@ -34,35 +38,66 @@ const SearchPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  // Format date for arXiv API (YYYYMMDDHHMMSS)
+  const formatDateForApi = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}${month}${day}0000`;
+  };
+
+  // Validate date range
+  const isValidDateRange = () => {
+    if (!useDateRange) return true;
+    if (!startDate || !endDate) return false;
+    return new Date(startDate) <= new Date(endDate);
+  };
+
   const performSearch = async (searchQuery, type = searchType) => {
     if (!searchQuery.trim()) return;
+
+    // Validate date range if enabled
+    if (useDateRange && !isValidDateRange()) {
+      setError('Invalid date range. End date must be after start date.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
       let data;
-      switch (type) {
-        case 'all':
-          data = await searchAllFields(searchQuery, 0, maxResults);
-          break;
-        case 'title':
-          data = await searchByTitle(searchQuery, 0, maxResults);
-          break;
-        case 'author':
-          data = await searchByAuthor(searchQuery, 0, maxResults);
-          break;
-        case 'category':
-          data = await searchByCategory(searchQuery, 0, maxResults);
-          break;
-        case 'abstract':
-          data = await searchByAbstract(searchQuery, 0, maxResults);
-          break;
-        case 'advanced':
-          data = await advancedSearch(searchQuery, sortBy, sortOrder, 0, maxResults);
-          break;
-        default:
-          data = await searchAllFields(searchQuery, 0, maxResults);
+
+      // If date range is enabled, use date range search
+      if (useDateRange && startDate && endDate) {
+        const formattedStartDate = formatDateForApi(startDate);
+        const formattedEndDate = formatDateForApi(endDate);
+        data = await searchByDateRange(searchQuery, formattedStartDate, formattedEndDate, maxResults);
+      } else {
+        switch (type) {
+          case 'all':
+            data = await searchAllFields(searchQuery, 0, maxResults);
+            break;
+          case 'title':
+            data = await searchByTitle(searchQuery, 0, maxResults);
+            break;
+          case 'author':
+            data = await searchByAuthor(searchQuery, 0, maxResults);
+            break;
+          case 'category':
+            data = await searchByCategory(searchQuery, 0, maxResults);
+            break;
+          case 'abstract':
+            data = await searchByAbstract(searchQuery, 0, maxResults);
+            break;
+          case 'advanced':
+            data = await advancedSearch(searchQuery, sortBy, sortOrder, 0, maxResults);
+            break;
+          default:
+            data = await searchAllFields(searchQuery, 0, maxResults);
+        }
       }
       setResults(data);
     } catch (err) {
@@ -159,6 +194,60 @@ const SearchPage = () => {
                 </div>
               </>
             )}
+
+            <div className="filter-divider"></div>
+
+            <div className="date-range-section">
+              <div className="filter-group">
+                <label className="date-range-toggle">
+                  <input
+                    type="checkbox"
+                    checked={useDateRange}
+                    onChange={(e) => setUseDateRange(e.target.checked)}
+                  />
+                  <Calendar size={16} />
+                  Filter by Date Range
+                </label>
+              </div>
+
+              {useDateRange && (
+                <div className="date-range-inputs">
+                  <div className="filter-group">
+                    <label>From:</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="date-input"
+                      max={endDate || undefined}
+                    />
+                  </div>
+                  <div className="filter-group">
+                    <label>To:</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="date-input"
+                      min={startDate || undefined}
+                      max={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                  {startDate && endDate && (
+                    <button
+                      type="button"
+                      className="clear-dates-btn"
+                      onClick={() => {
+                        setStartDate('');
+                        setEndDate('');
+                      }}
+                    >
+                      Clear Dates
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

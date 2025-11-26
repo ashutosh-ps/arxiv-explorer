@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Star, ScrollText, Trash2, FileText } from 'lucide-react';
+import { Star, ScrollText, Trash2, FileText, Download, FileCode } from 'lucide-react';
 import { getBookmarks, getHistory, clearHistory } from '../services/storageService';
+import { exportPapersAsBibtex } from '../services/citationService';
 import PaperCard from '../components/PaperCard';
 import PaperModal from '../components/PaperModal';
 
@@ -24,6 +25,22 @@ const LibraryPage = () => {
       clearHistory();
       setHistory([]);
     }
+  };
+
+  const handleExportBookmarks = () => {
+    if (bookmarks.length === 0) {
+      alert('No bookmarks to export');
+      return;
+    }
+    exportPapersAsBibtex(bookmarks, 'arxiv-bookmarks.bib');
+  };
+
+  const handleExportHistory = () => {
+    if (history.length === 0) {
+      alert('No history to export');
+      return;
+    }
+    exportPapersAsBibtex(history, 'arxiv-history.bib');
   };
 
   const handlePaperClick = (paper) => {
@@ -74,7 +91,13 @@ const LibraryPage = () => {
             <>
               <div className="content-header">
                 <h2>Saved Papers</h2>
-                <span className="count-badge">{bookmarks.length} papers</span>
+                <div className="content-header-actions">
+                  <span className="count-badge">{bookmarks.length} papers</span>
+                  <button className="export-btn" onClick={handleExportBookmarks}>
+                    <FileCode size={18} />
+                    Export BibTeX
+                  </button>
+                </div>
               </div>
               <div className="papers-grid">
                 {bookmarks.map((paper, index) => (
@@ -102,9 +125,15 @@ const LibraryPage = () => {
             <>
               <div className="content-header">
                 <h2>Reading History</h2>
-                <button className="clear-history-btn" onClick={handleClearHistory}>
-                  <Trash2 size={18} /> Clear History
-                </button>
+                <div className="content-header-actions">
+                  <button className="export-btn" onClick={handleExportHistory}>
+                    <FileCode size={18} />
+                    Export BibTeX
+                  </button>
+                  <button className="clear-history-btn" onClick={handleClearHistory}>
+                    <Trash2 size={18} /> Clear History
+                  </button>
+                </div>
               </div>
               <div className="history-list">
                 {history.map((paper, index) => (

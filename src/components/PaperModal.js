@@ -1,11 +1,21 @@
 import React from 'react';
-import { Star, FileText, ExternalLink, Share2, X } from 'lucide-react';
+import { Star, FileText, ExternalLink, Share2, X, Quote, Download, Copy, Check, ChevronDown } from 'lucide-react';
 import { isBookmarked, addBookmark, removeBookmark, addToHistory } from '../services/storageService';
 import { getCategoryColor } from '../data/categories';
+import {
+  generateCitation,
+  exportPaperAsBibtex,
+  copyToClipboard,
+  CITATION_FORMATS
+} from '../services/citationService';
 
 const PaperModal = ({ paper, onClose }) => {
   const [bookmarked, setBookmarked] = React.useState(isBookmarked(paper.id));
   const [showFullAbstract, setShowFullAbstract] = React.useState(false);
+  const [showCitationDropdown, setShowCitationDropdown] = React.useState(false);
+  const [selectedCitationFormat, setSelectedCitationFormat] = React.useState('bibtex');
+  const [copiedCitation, setCopiedCitation] = React.useState(false);
+  const [showCitationPreview, setShowCitationPreview] = React.useState(false);
 
   React.useEffect(() => {
     addToHistory(paper);
@@ -43,6 +53,23 @@ const PaperModal = ({ paper, onClose }) => {
       onClose();
     }
   };
+
+  const handleCopyCitation = async (format) => {
+    const citation = generateCitation(paper, format);
+    const success = await copyToClipboard(citation);
+    if (success) {
+      setCopiedCitation(true);
+      setTimeout(() => setCopiedCitation(false), 2000);
+    }
+    setShowCitationDropdown(false);
+  };
+
+  const handleDownloadBibtex = () => {
+    exportPaperAsBibtex(paper);
+    setShowCitationDropdown(false);
+  };
+
+  const currentCitation = generateCitation(paper, selectedCitationFormat);
 
   return (
     <div className="paper-modal-backdrop" onClick={handleBackdropClick}>
@@ -164,6 +191,95 @@ const PaperModal = ({ paper, onClose }) => {
               <Share2 size={18} />
               Share
             </button>
+
+            <div className="citation-dropdown-container">
+              <button
+                className="modal-action-btn cite-action"
+                onClick={() => setShowCitationDropdown(!showCitationDropdown)}
+              >
+                <Quote size={18} />
+                Cite
+                <ChevronDown size={14} className={showCitationDropdown ? 'rotated' : ''} />
+              </button>
+
+              {showCitationDropdown && (
+                <div className="citation-dropdown">
+                  <div className="citation-dropdown-header">
+                    <span>Copy Citation</span>
+                  </div>
+                  {CITATION_FORMATS.map((format) => (
+                    <button
+                      key={format.id}
+                      className="citation-format-btn"
+                      onClick={() => handleCopyCitation(format.id)}
+                    >
+                      <Copy size={14} />
+                      <span className="format-name">{format.name}</span>
+                      <span className="format-desc">{format.description}</span>
+                    </button>
+                  ))}
+                  <div className="citation-dropdown-divider"></div>
+                  <button
+                    className="citation-format-btn download-btn"
+                    onClick={handleDownloadBibtex}
+                  >
+                    <Download size={14} />
+                    <span className="format-name">Download BibTeX</span>
+                    <span className="format-desc">.bib file</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {copiedCitation && (
+              <div className="citation-copied-toast">
+                <Check size={16} />
+                Citation copied!
+              </div>
+            )}
+          </div>
+
+          <div className="citation-preview-section">
+            <button
+              className="citation-preview-toggle"
+              onClick={() => setShowCitationPreview(!showCitationPreview)}
+            >
+              <Quote size={16} />
+              {showCitationPreview ? 'Hide Citation Preview' : 'Show Citation Preview'}
+              <ChevronDown size={14} className={showCitationPreview ? 'rotated' : ''} />
+            </button>
+
+            {showCitationPreview && (
+              <div className="citation-preview">
+                <div className="citation-format-selector">
+                  {CITATION_FORMATS.map((format) => (
+                    <button
+                      key={format.id}
+                      className={`format-tab ${selectedCitationFormat === format.id ? 'active' : ''}`}
+                      onClick={() => setSelectedCitationFormat(format.id)}
+                    >
+                      {format.name}
+                    </button>
+                  ))}
+                </div>
+                <pre className="citation-text">{currentCitation}</pre>
+                <div className="citation-preview-actions">
+                  <button
+                    className="copy-citation-btn"
+                    onClick={() => handleCopyCitation(selectedCitationFormat)}
+                  >
+                    {copiedCitation ? <Check size={16} /> : <Copy size={16} />}
+                    {copiedCitation ? 'Copied!' : 'Copy'}
+                  </button>
+                  {selectedCitationFormat === 'bibtex' && (
+                    <button className="download-citation-btn" onClick={handleDownloadBibtex}>
+                      <Download size={16} />
+                      Download .bib
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
