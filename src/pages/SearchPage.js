@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, Settings, Loader, FileSearch, FileEdit, Calendar } from 'lucide-react';
 import {
@@ -10,8 +10,12 @@ import {
   advancedSearch,
   searchByDateRange
 } from '../services/arxivApi';
+import { addSearchToHistory } from '../services/storageService';
 import PaperCard from '../components/PaperCard';
 import PaperModal from '../components/PaperModal';
+import SearchHistory from '../components/SearchHistory';
+
+const RESULTS_PER_PAGE = 20;
 
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,15 +23,22 @@ const SearchPage = () => {
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState('relevance');
   const [sortOrder, setSortOrder] = useState('descending');
-  const [maxResults, setMaxResults] = useState(20);
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [useDateRange, setUseDateRange] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0);
+  const searchInputRef = useRef(null);
+  const searchContainerRef = useRef(null);
+  const loaderRef = useRef(null);
+  const currentQueryRef = useRef('');
 
   useEffect(() => {
     const q = searchParams.get('q');
@@ -37,6 +48,17 @@ const SearchPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // Close search history when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
+        setShowHistory(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Format date for arXiv API (YYYYMMDDHHMMSS)
   const formatDateForApi = (dateString) => {
@@ -55,6 +77,32 @@ const SearchPage = () => {
     return new Date(startDate) <= new Date(endDate);
   };
 
+  // Fetch results based on search type
+  const fetchResults = async (searchQuery, type, start, limit) => {
+    if (useDateRange && startDate && endDate) {
+      const formattedStartDate = formatDateForApi(startDate);
+      const formattedEndDate = formatDateForApi(endDate);
+      return await searchByDateRange(searchQuery, formattedStartDate, formattedEndDate, limit);
+    }
+
+    switch (type) {
+      case 'all':
+        return await searchAllFields(searchQuery, start, limit);
+      case 'title':
+        return await searchByTitle(searchQuery, start, limit);
+      case 'author':
+        return await searchByAuthor(searchQuery, start, limit);
+      case 'category':
+        return await searchByCategory(searchQuery, start, limit);
+      case 'abstract':
+        return await searchByAbstract(searchQuery, start, limit);
+      case 'advanced':
+        return await advancedSearch(searchQuery, sortBy, sortOrder, start, limit);
+      default:
+        return await searchAllFields(searchQuery, start, limit);
+    }
+  };
+
   const performSearch = async (searchQuery, type = searchType) => {
     if (!searchQuery.trim()) return;
 
@@ -66,47 +114,72 @@ const SearchPage = () => {
 
     setLoading(true);
     setError(null);
+    setResults([]);
+    setCurrentPage(0);
+    setHasMore(true);
+    currentQueryRef.current = searchQuery;
 
     try {
-      let data;
-
-      // If date range is enabled, use date range search
-      if (useDateRange && startDate && endDate) {
-        const formattedStartDate = formatDateForApi(startDate);
-        const formattedEndDate = formatDateForApi(endDate);
-        data = await searchByDateRange(searchQuery, formattedStartDate, formattedEndDate, maxResults);
-      } else {
-        switch (type) {
-          case 'all':
-            data = await searchAllFields(searchQuery, 0, maxResults);
-            break;
-          case 'title':
-            data = await searchByTitle(searchQuery, 0, maxResults);
-            break;
-          case 'author':
-            data = await searchByAuthor(searchQuery, 0, maxResults);
-            break;
-          case 'category':
-            data = await searchByCategory(searchQuery, 0, maxResults);
-            break;
-          case 'abstract':
-            data = await searchByAbstract(searchQuery, 0, maxResults);
-            break;
-          case 'advanced':
-            data = await advancedSearch(searchQuery, sortBy, sortOrder, 0, maxResults);
-            break;
-          default:
-            data = await searchAllFields(searchQuery, 0, maxResults);
-        }
-      }
+      const data = await fetchResults(searchQuery, type, 0, RESULTS_PER_PAGE);
       setResults(data);
+      setHasMore(data.length === RESULTS_PER_PAGE);
+      // Save to search history
+      addSearchToHistory(searchQuery, type, data.length);
     } catch (err) {
       setError('Failed to fetch results. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
+      setShowHistory(false);
     }
   };
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || !currentQueryRef.current) return;
+
+    setLoadingMore(true);
+    const nextPage = currentPage + 1;
+    const start = nextPage * RESULTS_PER_PAGE;
+
+    try {
+      const data = await fetchResults(currentQueryRef.current, searchType, start, RESULTS_PER_PAGE);
+      if (data.length === 0) {
+        setHasMore(false);
+      } else {
+        setResults(prev => [...prev, ...data]);
+        setCurrentPage(nextPage);
+        setHasMore(data.length === RESULTS_PER_PAGE);
+      }
+    } catch (err) {
+      console.error('Error loading more results:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingMore, hasMore, currentPage, searchType, useDateRange, startDate, endDate, sortBy, sortOrder]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentLoader = loaderRef.current;
+    if (currentLoader) {
+      observer.observe(currentLoader);
+    }
+
+    return () => {
+      if (currentLoader) {
+        observer.unobserve(currentLoader);
+      }
+    };
+  }, [hasMore, loading, loadingMore, loadMore]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -116,6 +189,13 @@ const SearchPage = () => {
     }
   };
 
+  const handleSelectFromHistory = (historyQuery, historySearchType) => {
+    setQuery(historyQuery);
+    setSearchType(historySearchType);
+    setSearchParams({ q: historyQuery });
+    performSearch(historyQuery, historySearchType);
+  };
+
   return (
     <div className="search-page">
       <div className="search-page-header">
@@ -123,7 +203,7 @@ const SearchPage = () => {
         <p>Search across millions of academic papers</p>
       </div>
 
-      <div className="search-container">
+      <div className="search-container" ref={searchContainerRef}>
         <div className="search-type-tabs">
           {['all', 'title', 'author', 'category', 'abstract', 'advanced'].map((type) => (
             <button
@@ -137,19 +217,28 @@ const SearchPage = () => {
         </div>
 
         <form className="search-form-main" onSubmit={handleSearch}>
-          <input
-            type="text"
-            className="search-input-main"
-            placeholder={
-              searchType === 'category'
-                ? 'e.g., cs.AI, math.NT'
-                : searchType === 'advanced'
-                ? 'e.g., ti:quantum AND au:Einstein'
-                : `Search by ${searchType}...`
-            }
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <div className="search-input-wrapper">
+            <input
+              ref={searchInputRef}
+              type="text"
+              className="search-input-main"
+              placeholder={
+                searchType === 'category'
+                  ? 'e.g., cs.AI, math.NT'
+                  : searchType === 'advanced'
+                  ? 'e.g., ti:quantum AND au:Einstein'
+                  : `Search by ${searchType}...`
+              }
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => setShowHistory(true)}
+            />
+            <SearchHistory
+              visible={showHistory}
+              onSelectSearch={handleSelectFromHistory}
+              onClose={() => setShowHistory(false)}
+            />
+          </div>
           <button type="submit" className="search-btn-main" disabled={loading}>
             {loading ? <Loader size={18} className="spinner-icon" /> : <Search size={18} />} Search
           </button>
@@ -164,16 +253,6 @@ const SearchPage = () => {
 
         {showFilters && (
           <div className="search-filters">
-            <div className="filter-group">
-              <label>Results per page:</label>
-              <select value={maxResults} onChange={(e) => setMaxResults(Number(e.target.value))}>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </div>
-
             {searchType === 'advanced' && (
               <>
                 <div className="filter-group">
@@ -264,16 +343,31 @@ const SearchPage = () => {
       {!loading && results.length > 0 && (
         <div className="search-results">
           <div className="results-header">
-            <h2>Found {results.length} papers</h2>
+            <h2>Found {results.length}+ papers</h2>
           </div>
           <div className="papers-grid">
             {results.map((paper, index) => (
               <PaperCard
-                key={index}
+                key={`${paper.id}-${index}`}
                 paper={paper}
                 onPaperClick={setSelectedPaper}
               />
             ))}
+          </div>
+
+          {/* Infinite scroll loader */}
+          <div ref={loaderRef} className="infinite-scroll-loader">
+            {loadingMore && (
+              <div className="loading-more">
+                <div className="spinner-small"></div>
+                <p>Loading more papers...</p>
+              </div>
+            )}
+            {!hasMore && results.length > 0 && (
+              <div className="no-more-results">
+                <p>No more papers to load</p>
+              </div>
+            )}
           </div>
         </div>
       )}

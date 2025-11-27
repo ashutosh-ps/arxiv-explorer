@@ -3,6 +3,7 @@
 const STORAGE_KEYS = {
   BOOKMARKS: 'arxiv_bookmarks',
   HISTORY: 'arxiv_history',
+  SEARCH_HISTORY: 'arxiv_search_history',
   DARK_MODE: 'arxiv_dark_mode',
   COLLECTIONS: 'arxiv_collections'
 };
@@ -153,6 +154,65 @@ export const addToCollection = (collectionId, paper) => {
     return false;
   } catch (error) {
     console.error('Error adding to collection:', error);
+    return false;
+  }
+};
+
+// Search History
+const MAX_SEARCH_HISTORY = 20;
+
+export const getSearchHistory = () => {
+  try {
+    const history = localStorage.getItem(STORAGE_KEYS.SEARCH_HISTORY);
+    return history ? JSON.parse(history) : [];
+  } catch (error) {
+    console.error('Error reading search history:', error);
+    return [];
+  }
+};
+
+export const addSearchToHistory = (query, searchType, resultCount) => {
+  try {
+    let history = getSearchHistory();
+    // Remove duplicate if same query and searchType exists
+    history = history.filter(
+      item => !(item.query.toLowerCase() === query.toLowerCase() && item.searchType === searchType)
+    );
+    // Add new search at the beginning
+    history.unshift({
+      query,
+      searchType,
+      resultCount,
+      timestamp: Date.now()
+    });
+    // Keep only last MAX_SEARCH_HISTORY items
+    history = history.slice(0, MAX_SEARCH_HISTORY);
+    localStorage.setItem(STORAGE_KEYS.SEARCH_HISTORY, JSON.stringify(history));
+    return true;
+  } catch (error) {
+    console.error('Error adding to search history:', error);
+    return false;
+  }
+};
+
+export const removeSearchFromHistory = (timestamp) => {
+  try {
+    let history = getSearchHistory();
+    history = history.filter(item => item.timestamp !== timestamp);
+    localStorage.setItem(STORAGE_KEYS.SEARCH_HISTORY, JSON.stringify(history));
+    return true;
+  } catch (error) {
+    console.error('Error removing from search history:', error);
+    return false;
+  }
+};
+
+export const clearSearchHistory = () => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SEARCH_HISTORY, JSON.stringify([]));
+    return true;
+  } catch (error) {
+    console.error('Error clearing search history:', error);
     return false;
   }
 };

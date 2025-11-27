@@ -1,30 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, BookMarked, Moon, Zap, ArrowRight } from 'lucide-react';
+import { Search, BookMarked, Moon, Zap, ArrowRight, RefreshCw } from 'lucide-react';
 import { searchAllFields } from '../services/arxivApi';
-import { categories } from '../data/categories';
+import { featuredCategories } from '../data/categories';
 import PaperCard from '../components/PaperCard';
 import PaperModal from '../components/PaperModal';
 
 const HomePage = () => {
   const [recentPapers, setRecentPapers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedPaper, setSelectedPaper] = useState(null);
 
-  useEffect(() => {
-    const fetchRecentPapers = async () => {
-      try {
-        setLoading(true);
-        // Fetch recent papers in AI/ML
-        const papers = await searchAllFields('artificial intelligence OR machine learning', 0, 6);
-        setRecentPapers(papers);
-      } catch (error) {
-        console.error('Error fetching recent papers:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchRecentPapers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Fetch recent papers in AI/ML
+      const papers = await searchAllFields('artificial intelligence OR machine learning', 0, 6);
+      setRecentPapers(papers);
+    } catch (error) {
+      console.error('Error fetching recent papers:', error);
+      setError('Failed to load featured papers. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchRecentPapers();
   }, []);
 
@@ -59,14 +62,16 @@ const HomePage = () => {
       <section className="categories-preview">
         <h2 className="section-title">Browse by Category</h2>
         <div className="categories-grid">
-          {categories.slice(0, 8).map((category) => (
+          {featuredCategories.slice(0, 8).map((category) => (
             <Link
               key={category.id}
               to={`/categories/${category.id}`}
               className="category-card"
               style={{ borderColor: category.color }}
             >
-              <span className="category-icon">{category.icon}</span>
+              <span className="category-icon" style={{ backgroundColor: category.color }}>
+                {category.id.split('.')[0].toUpperCase()}
+              </span>
               <h3 className="category-name">{category.name}</h3>
               <p className="category-desc">{category.description}</p>
             </Link>
@@ -85,6 +90,22 @@ const HomePage = () => {
           <div className="loading-state">
             <div className="spinner"></div>
             <p>Loading papers...</p>
+          </div>
+        ) : error ? (
+          <div className="error-state">
+            <p>{error}</p>
+            <button className="retry-button" onClick={fetchRecentPapers}>
+              <RefreshCw size={16} />
+              Retry
+            </button>
+          </div>
+        ) : recentPapers.length === 0 ? (
+          <div className="empty-state">
+            <p>No papers found.</p>
+            <button className="retry-button" onClick={fetchRecentPapers}>
+              <RefreshCw size={16} />
+              Try Again
+            </button>
           </div>
         ) : (
           <div className="papers-grid">
