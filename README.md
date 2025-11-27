@@ -11,9 +11,20 @@ A modern, brutalist-style web application for exploring and searching academic p
 ### Core Functionality
 - **7 Search Types**: All fields, Title, Author, Category, Abstract, Advanced queries, and Direct ID lookup
 - **Phrase-Matching Optimization**: Intelligent query parsing with automatic quote wrapping for exact phrase searches
-- **16+ Academic Categories**: Browse papers across Computer Science, Physics, Mathematics, Economics, Biology, and more
+- **155 Academic Categories**: Complete arXiv taxonomy across 16 fields (Computer Science, Physics, Mathematics, Economics, Biology, and more)
 - **Personal Library**: Bookmark papers and track reading history with LocalStorage persistence
 - **Dark/Light Mode**: Full theme support with instant toggle and system preference detection
+
+### Search & Discovery
+- **Infinite Scroll**: Seamlessly load more results as you scroll - no pagination clicks needed
+- **Search History**: Recent searches saved locally with quick re-run functionality
+- **Date Range Filter**: Filter papers by publication date range
+- **Advanced Filters**: Sort by relevance/date, ascending/descending order
+
+### Citation & Export
+- **BibTeX Export**: Export single papers or bulk export all bookmarks as `.bib` files
+- **Citation Formats**: Copy citations in APA, MLA, IEEE, Chicago, or BibTeX format
+- **Citation Preview**: Preview formatted citations before copying
 
 ### Modern UI/UX
 - **Brutalist Design**: Clean black & white aesthetic with sharp corners and 3D hover effects
@@ -21,12 +32,14 @@ A modern, brutalist-style web application for exploring and searching academic p
 - **Responsive Layout**: Optimized for desktop, tablet, and mobile devices
 - **3D Interactions**: Cuboid hover effects using CSS transforms and box-shadow
 - **Smooth Animations**: Polished transitions throughout the interface
+- **Error Recovery**: Retry buttons on failed API calls for better reliability
 
 ### Technical Highlights
 - **CORS Solution**: Integrated proxy service for seamless cross-origin API requests
 - **XML Parsing**: Efficient DOMParser implementation for arXiv's Atom feed format
 - **Client-Side Storage**: No backend required - all data persisted in browser
 - **Component Architecture**: 15+ reusable React components with clean separation of concerns
+- **Intersection Observer**: Native browser API for efficient infinite scroll detection
 
 ## 🛠️ Tech Stack
 
@@ -80,14 +93,24 @@ npm run build
 
 ### Browse Categories
 1. Visit the **Categories** page
-2. Click on any category card to explore papers in that field
-3. Each category shows recent papers with full metadata
+2. Categories are organized by field (Computer Science, Physics, Mathematics, etc.)
+3. Click any group header to expand/collapse categories
+4. Click a category to view papers with infinite scroll support
+5. Each category shows the full arXiv taxonomy (155 categories across 16 fields)
 
 ### Manage Your Library
 1. Bookmark papers by clicking the star icon
 2. View all bookmarked papers in **My Library** → Bookmarks
 3. Check your reading history in **My Library** → History
-4. Clear history anytime with one click
+4. Export all bookmarks as BibTeX file for citation managers
+5. Clear history anytime with one click
+
+### Copy Citations
+1. Open any paper by clicking on it
+2. Click the **Cite** button in the paper modal
+3. Select your preferred format (APA, MLA, IEEE, Chicago, BibTeX)
+4. Preview the formatted citation
+5. Click **Copy** to copy to clipboard
 
 ### Dark Mode
 - Toggle dark/light mode using the moon/sun icon in the header
@@ -104,19 +127,21 @@ arxiv-explorer/
 │   ├── components/
 │   │   ├── Header.js          # Navigation header with search and theme toggle
 │   │   ├── PaperCard.js       # Paper preview card component
-│   │   └── PaperModal.js      # Full paper details modal
+│   │   ├── PaperModal.js      # Full paper details modal with citations
+│   │   └── SearchHistory.js   # Recent searches dropdown component
 │   ├── context/
 │   │   └── DarkModeContext.js # Theme state management
 │   ├── data/
-│   │   └── categories.js      # Academic category definitions
+│   │   └── categories.js      # Complete arXiv taxonomy (155 categories)
 │   ├── pages/
 │   │   ├── HomePage.js        # Landing page with featured papers
-│   │   ├── SearchPage.js      # Advanced search interface
-│   │   ├── CategoriesPage.js  # Category browser and detail views
-│   │   └── LibraryPage.js     # Bookmarks and history management
+│   │   ├── SearchPage.js      # Advanced search with infinite scroll
+│   │   ├── CategoriesPage.js  # Category browser with collapsible groups
+│   │   └── LibraryPage.js     # Bookmarks, history, and BibTeX export
 │   ├── services/
 │   │   ├── arxivApi.js        # arXiv API integration layer
-│   │   └── storageService.js  # LocalStorage wrapper functions
+│   │   ├── citationService.js # Citation formatting (APA, MLA, IEEE, etc.)
+│   │   └── storageService.js  # LocalStorage for bookmarks, history, search history
 │   ├── App.js                 # Main app component with routing
 │   ├── styles.css             # Global brutalist design system
 │   └── index.js               # App entry point
@@ -132,6 +157,24 @@ The app intelligently wraps multi-word queries in quotes to ensure exact phrase 
 - API: `ti:"Attention Is All You Need"`
 - Result: Exact title match instead of OR-separated terms
 
+### Infinite Scroll
+Uses Intersection Observer API for efficient scroll detection:
+```javascript
+const observer = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting && hasMore) {
+    loadMore();
+  }
+}, { threshold: 0.1 });
+```
+
+### Citation Formats
+Generate citations in multiple academic formats:
+- **APA**: Author, A. A. (Year). Title. *arXiv preprint*. https://arxiv.org/abs/ID
+- **MLA**: Author. "Title." *arXiv*, Year, arxiv.org/abs/ID.
+- **IEEE**: A. Author, "Title," *arXiv:ID*, Year.
+- **Chicago**: Author. "Title." arXiv preprint arXiv:ID (Year). URL.
+- **BibTeX**: Full `@article{}` entry for LaTeX
+
 ### 3D Hover Effects
 Using CSS transforms and box-shadow to create cuboid depth:
 ```css
@@ -146,6 +189,15 @@ Since arXiv API doesn't support CORS, we use AllOrigins:
 ```javascript
 const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(arxivUrl)}`;
 ```
+
+### Complete arXiv Taxonomy
+All 155 categories organized into 16 groups:
+- Computer Science (40 categories)
+- Mathematics (32 categories)
+- Physics (22 categories)
+- Astrophysics (6 categories)
+- Condensed Matter (9 categories)
+- And 11 more fields...
 
 ## 🎨 Design System
 
