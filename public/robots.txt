@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 
 # Sitemap location - UPDATE with your actual domain
-Sitemap: https://arxiv-explorer-chi.vercel.app/
+Sitemap: https://arxiv-explorer-chi.vercel.app/sitemap.xml
