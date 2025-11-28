@@ -267,7 +267,7 @@ export const searchCategories = (query) => {
 
 // Popular/featured categories for homepage
 export const featuredCategories = [
-  'cs.AI', 'cs.LG', 'cs.CV', 'cs.CL', 'cs.CR', 'cs.NE',
+  'cs.AI', 'math.PR', 'q-fin.CP', 'stat.TH', 'q-bio.CB', 'cs.NE',
   'stat.ML', 'quant-ph', 'math.NT', 'physics.gen-ph',
   'astro-ph.CO', 'econ.TH', 'q-bio.NC', 'cs.RO'
 ].map(id => getCategoryById(id)).filter(Boolean);

@@ -251,7 +251,7 @@ const CategoriesPage = () => {
                   <span className="group-icon" style={{ backgroundColor: groupColor }}>
                     {groupName.charAt(0)}
                   </span>
-                  <div>
+                  <div style={{ textAlign: 'start'}}>
                     <h2>{groupName}</h2>
                     <span className="group-count">{cats.length} categories</span>
                   </div>
