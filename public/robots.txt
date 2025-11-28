@@ -1,3 +1,6 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+
+# Sitemap location - UPDATE with your actual domain
+Sitemap: https://arxiv-explorer-chi.vercel.app/
