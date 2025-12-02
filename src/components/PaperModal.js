@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, FileText, ExternalLink, Share2, X, Quote, Download, Copy, Check, ChevronDown } from 'lucide-react';
+import { Star, FileText, ExternalLink, Share2, X, Quote, Download, Copy, Check, ChevronDown, Code, Github, Loader } from 'lucide-react';
 import { isBookmarked, addBookmark, removeBookmark, addToHistory } from '../services/storageService';
 import { getCategoryColor } from '../data/categories';
 import {
@@ -8,6 +8,12 @@ import {
   copyToClipboard,
   CITATION_FORMATS
 } from '../services/citationService';
+import {
+  getCodeLinks,
+  getFrameworkInfo,
+  parseGitHubUrl,
+  extractArxivId as extractArxivIdFromUrl
+} from '../services/papersWithCodeApi';
 
 const PaperModal = ({ paper, onClose }) => {
   const [bookmarked, setBookmarked] = React.useState(isBookmarked(paper.id));
@@ -16,10 +22,30 @@ const PaperModal = ({ paper, onClose }) => {
   const [selectedCitationFormat, setSelectedCitationFormat] = React.useState('bibtex');
   const [copiedCitation, setCopiedCitation] = React.useState(false);
   const [showCitationPreview, setShowCitationPreview] = React.useState(false);
+  const [codeLinks, setCodeLinks] = React.useState([]);
+  const [loadingCode, setLoadingCode] = React.useState(true);
+  const [showAllRepos, setShowAllRepos] = React.useState(false);
 
   React.useEffect(() => {
     addToHistory(paper);
     document.body.style.overflow = 'hidden';
+
+    // Fetch code links
+    const arxivId = extractArxivIdFromUrl(paper.id);
+    if (arxivId) {
+      setLoadingCode(true);
+      getCodeLinks(arxivId)
+        .then(links => {
+          setCodeLinks(links);
+          setLoadingCode(false);
+        })
+        .catch(() => {
+          setLoadingCode(false);
+        });
+    } else {
+      setLoadingCode(false);
+    }
+
     return () => {
       document.body.style.overflow = 'unset';
     };
@@ -278,6 +304,78 @@ const PaperModal = ({ paper, onClose }) => {
                     </button>
                   )}
                 </div>
+              </div>
+            )}
+          </div>
+
+          <div className="code-links-section">
+            <div className="code-links-header">
+              <Code size={18} />
+              <span>Code Implementations</span>
+              {!loadingCode && codeLinks.length > 0 && (
+                <span className="code-count-badge">{codeLinks.length}</span>
+              )}
+            </div>
+
+            {loadingCode ? (
+              <div className="code-links-loading">
+                <Loader size={20} className="spinning" />
+                <span>Checking for code...</span>
+              </div>
+            ) : codeLinks.length === 0 ? (
+              <div className="code-links-empty">
+                <span>No code implementations found for this paper.</span>
+              </div>
+            ) : (
+              <div className="code-links-list">
+                {(showAllRepos ? codeLinks : codeLinks.slice(0, 5)).map((repo, index) => {
+                  const githubInfo = parseGitHubUrl(repo.url);
+                  const frameworkInfo = getFrameworkInfo(repo.framework);
+
+                  return (
+                    <a
+                      key={index}
+                      href={repo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`code-link-item ${repo.isOfficial ? 'official' : ''}`}
+                    >
+                      <Github size={18} className="repo-icon" />
+                      <div className="repo-info">
+                        <span className="repo-name">
+                          {githubInfo ? githubInfo.fullName : repo.url.split('/').slice(-2).join('/')}
+                        </span>
+                        <div className="repo-meta">
+                          {repo.isOfficial && (
+                            <span className="official-badge">Official</span>
+                          )}
+                          <span
+                            className="framework-badge"
+                            style={{
+                              backgroundColor: frameworkInfo.color + '20',
+                              color: frameworkInfo.color,
+                              borderColor: frameworkInfo.color
+                            }}
+                          >
+                            {frameworkInfo.name}
+                          </span>
+                        </div>
+                      </div>
+                      <ExternalLink size={14} className="link-icon" />
+                    </a>
+                  );
+                })}
+
+                {codeLinks.length > 5 && (
+                  <button
+                    className="show-more-repos-btn"
+                    onClick={() => setShowAllRepos(!showAllRepos)}
+                  >
+                    {showAllRepos
+                      ? 'Show Less'
+                      : `Show ${codeLinks.length - 5} More Repositories`}
+                  </button>
+                )}
               </div>
             )}
           </div>

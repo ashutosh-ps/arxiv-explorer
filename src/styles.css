@@ -1920,3 +1920,192 @@ body.dark-mode .date-input::-webkit-calendar-picker-indicator {
     justify-content: center;
   }
 }
+
+/* ====== CODE LINKS SECTION ====== */
+.code-links-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: var(--border-width) solid var(--border-color);
+}
+
+.code-links-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.code-count-badge {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0;
+  margin-left: 0.5rem;
+}
+
+.code-links-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-tertiary);
+  padding: 1rem 0;
+}
+
+.code-links-loading .spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.code-links-empty {
+  color: var(--text-tertiary);
+  padding: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.code-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.code-link-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: var(--border-width) solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.code-link-item:hover {
+  transform: translate(var(--3d-offset), var(--3d-offset));
+  box-shadow: calc(-1 * var(--3d-offset)) calc(-1 * var(--3d-offset)) 0 var(--border-color);
+}
+
+.code-link-item.official {
+  border-width: calc(var(--border-width) + 1px);
+}
+
+.code-link-item .repo-icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.code-link-item .repo-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.code-link-item .repo-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code-link-item .repo-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.code-link-item .official-badge {
+  background: #22c55e;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.15rem 0.4rem;
+  letter-spacing: 0.02em;
+}
+
+.code-link-item .framework-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid;
+}
+
+.code-link-item .link-icon {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.code-link-item:hover .link-icon {
+  opacity: 1;
+}
+
+.show-more-repos-btn {
+  width: 100%;
+  padding: 0.75rem;
+  border: var(--border-width) solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  margin-top: 0.5rem;
+}
+
+.show-more-repos-btn:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+/* ====== HAS CODE BADGE ON PAPER CARD ====== */
+.paper-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.has-code-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  margin-top: 0.1rem;
+}
+
+body.dark-mode .has-code-badge {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+/* Responsive adjustments for code links */
+@media (max-width: 768px) {
+  .code-link-item {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .code-link-item .repo-name {
+    font-size: 0.85rem;
+  }
+
+  .code-link-item .framework-badge,
+  .code-link-item .official-badge {
+    font-size: 0.6rem;
+  }
+}

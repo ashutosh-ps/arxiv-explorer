@@ -1,10 +1,21 @@
 import React from 'react';
-import { Star, Calendar, Eye, FileText, ExternalLink } from 'lucide-react';
+import { Star, Calendar, Eye, FileText, ExternalLink, Code } from 'lucide-react';
 import { isBookmarked, addBookmark, removeBookmark } from '../services/storageService';
 import { getCategoryColor } from '../data/categories';
+import { getCodeLinks, extractArxivId } from '../services/papersWithCodeApi';
 
 const PaperCard = ({ paper, onPaperClick }) => {
   const [bookmarked, setBookmarked] = React.useState(isBookmarked(paper.id));
+  const [hasCode, setHasCode] = React.useState(false);
+
+  React.useEffect(() => {
+    const arxivId = extractArxivId(paper.id);
+    if (arxivId) {
+      getCodeLinks(arxivId).then(links => {
+        setHasCode(links.length > 0);
+      });
+    }
+  }, [paper.id]);
 
   const handleBookmark = (e) => {
     e.stopPropagation();
@@ -33,7 +44,14 @@ const PaperCard = ({ paper, onPaperClick }) => {
   return (
     <div className="paper-card-modern" onClick={() => onPaperClick(paper)}>
       <div className="paper-card-header">
-        <h3 className="paper-title-modern">{paper.title}</h3>
+        <div className="paper-title-row">
+          <h3 className="paper-title-modern">{paper.title}</h3>
+          {hasCode && (
+            <span className="has-code-badge" title="Code available">
+              <Code size={14} />
+            </span>
+          )}
+        </div>
         <button
           className={`bookmark-btn ${bookmarked ? 'bookmarked' : ''}`}
           onClick={handleBookmark}
