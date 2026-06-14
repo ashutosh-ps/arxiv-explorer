@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, ScrollText, Trash2, FileText, Download, FileCode } from 'lucide-react';
+import { Star, ScrollText, Trash2, FileText, FileCode } from 'lucide-react';
 import { getBookmarks, getHistory, clearHistory } from '../services/storageService';
 import { exportPapersAsBibtex } from '../services/citationService';
 import PaperCard from '../components/PaperCard';
