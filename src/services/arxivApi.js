@@ -1,5 +1,4 @@
-const BASE_URL = 'https://export.arxiv.org/api/query';
-
+const BASE_URL = '/api/arxiv';
 /**
  * Parse XML response from arXiv API
  */
