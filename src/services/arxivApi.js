@@ -56,8 +56,8 @@ const parseArxivResponse = (xmlString) => {
  * Fetch with CORS proxy
  */
 const fetchWithProxy = async (url) => {
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-  const response = await fetch(proxyUrl);
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`arXiv request failed: ${response.status}`);
   return response.text();
 };
 
