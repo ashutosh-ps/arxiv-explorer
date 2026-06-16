@@ -19,6 +19,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:api": "node --test 'api/_lib/**/*.test.js'",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
