@@ -1,34 +1,59 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, BookMarked, Moon, Zap, ArrowRight, RefreshCw } from 'lucide-react';
-import { searchAllFields } from '../services/arxivApi';
+import { searchByCategory, searchAllFields } from '../services/arxivApi';
 import { featuredCategories } from '../data/categories';
+import { getFeaturedCategoryForToday } from '../utils/featured';
 import PaperCard from '../components/PaperCard';
 import PaperModal from '../components/PaperModal';
 
 const HomePage = () => {
-  const [recentPapers, setRecentPapers] = useState([]);
+  const [featuredPapers, setFeaturedPapers] = useState([]);
+  const [featuredTopic, setFeaturedTopic] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedPaper, setSelectedPaper] = useState(null);
 
-  const fetchRecentPapers = async () => {
+  const fetchFeaturedPapers = async () => {
     try {
       setLoading(true);
       setError(null);
-      // Fetch recent papers in AI/ML
-      const papers = await searchAllFields('artificial intelligence OR machine learning', 0, 6);
-      setRecentPapers(papers);
+
+      // Rotate the spotlight topic daily, then pull that category's newest papers.
+      const topic = getFeaturedCategoryForToday();
+      setFeaturedTopic(topic);
+
+      let papers = [];
+      try {
+        if (topic) {
+          papers = await searchByCategory(topic.id, 0, 6, 'submittedDate', 'descending');
+        }
+      } catch (topicError) {
+        // A thin or rate-limited category shouldn't blank the homepage — fall through.
+        console.warn('Featured topic fetch failed, falling back:', topicError);
+        papers = [];
+      }
+
+      // Fallback to a broad AI/ML query if the topic returned little or nothing.
+      if (papers.length < 6) {
+        papers = await searchAllFields('artificial intelligence OR machine learning', 0, 6);
+      }
+
+      setFeaturedPapers(papers);
     } catch (error) {
-      console.error('Error fetching recent papers:', error);
+      console.error('Error fetching featured papers:', error);
       setError('Failed to load featured papers. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Guard against React StrictMode's double-invoke in dev firing two arXiv requests.
+  const hasFetched = useRef(false);
   useEffect(() => {
-    fetchRecentPapers();
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+    fetchFeaturedPapers();
   }, []);
 
   return (
@@ -86,6 +111,9 @@ const HomePage = () => {
 
       <section className="recent-papers">
         <h2 className="section-title">Featured Papers</h2>
+        {featuredTopic && !loading && !error && (
+          <p className="section-subtitle">Today's topic: {featuredTopic.name}</p>
+        )}
         {loading ? (
           <div className="loading-state">
             <div className="spinner"></div>
@@ -94,22 +122,22 @@ const HomePage = () => {
         ) : error ? (
           <div className="error-state">
             <p>{error}</p>
-            <button className="retry-button" onClick={fetchRecentPapers}>
+            <button className="retry-button" onClick={fetchFeaturedPapers}>
               <RefreshCw size={16} />
               Retry
             </button>
           </div>
-        ) : recentPapers.length === 0 ? (
+        ) : featuredPapers.length === 0 ? (
           <div className="empty-state">
             <p>No papers found.</p>
-            <button className="retry-button" onClick={fetchRecentPapers}>
+            <button className="retry-button" onClick={fetchFeaturedPapers}>
               <RefreshCw size={16} />
               Try Again
             </button>
           </div>
         ) : (
           <div className="papers-grid">
-            {recentPapers.map((paper, index) => (
+            {featuredPapers.map((paper, index) => (
               <PaperCard
                 key={index}
                 paper={paper}

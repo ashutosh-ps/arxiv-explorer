@@ -244,6 +244,16 @@ body {
   text-transform: uppercase;
 }
 
+.section-subtitle {
+  text-align: center;
+  margin: -1.5rem 0 2rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+}
+
 /* ====== CATEGORIES ====== */
 .categories-preview, .recent-papers, .features-section {
   max-width: 1400px;

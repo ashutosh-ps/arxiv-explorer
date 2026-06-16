@@ -117,8 +117,10 @@ export const searchByAuthor = async (author, start = 0, maxResults = 10) => {
 /**
  * Search by category
  */
-export const searchByCategory = async (category, start = 0, maxResults = 10) => {
-  const url = `${BASE_URL}?search_query=cat:${encodeURIComponent(category)}&start=${start}&max_results=${maxResults}`;
+export const searchByCategory = async (category, start = 0, maxResults = 10, sortBy = null, sortOrder = 'descending') => {
+  // sortBy is opt-in so existing callers (CategoriesPage, SearchPage) keep arXiv's default ordering.
+  const sortParams = sortBy ? `&sortBy=${sortBy}&sortOrder=${sortOrder}` : '';
+  const url = `${BASE_URL}?search_query=cat:${encodeURIComponent(category)}&start=${start}&max_results=${maxResults}${sortParams}`;
 
   try {
     const text = await fetchWithProxy(url);
