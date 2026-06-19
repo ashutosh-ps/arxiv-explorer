@@ -1,6 +1,7 @@
 const { createStore } = require('./store');
 const { createRateLimiter } = require('./rate-limit');
 const { createCircuitBreaker } = require('./resilience');
+const { createLogger } = require('./logger');
 const { createGateway } = require('./gateway');
 
 // Assembles the full arXiv gateway handler from environment configuration. Both entry
@@ -16,7 +17,7 @@ const { createGateway } = require('./gateway');
 //   ARXIV_TIMEOUT_MS                 -> per-attempt timeout        (default 8000)
 //   ARXIV_BREAKER_THRESHOLD          -> failures before opening    (default 5)
 //   ARXIV_BREAKER_COOLDOWN_MS        -> open -> half-open delay     (default 30000)
-function createArxivHandler({ env = process.env, fetchImpl } = {}) {
+function createArxivHandler({ env = process.env, fetchImpl, logger = createLogger() } = {}) {
   const store = createStore({ env });
   const rateLimiter = createRateLimiter(store, {
     capacity: Number(env.RATE_LIMIT_CAPACITY) || 20,
@@ -31,6 +32,7 @@ function createArxivHandler({ env = process.env, fetchImpl } = {}) {
     store,
     rateLimiter,
     fetchImpl,
+    logger,
     cacheTtlSeconds: Number(env.ARXIV_CACHE_TTL_SECONDS) || 3600,
     breaker,
     retryOptions: { attempts: Number(env.ARXIV_RETRY_ATTEMPTS) || 3 },

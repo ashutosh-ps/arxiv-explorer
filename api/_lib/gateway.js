@@ -45,14 +45,20 @@ function createGateway({
   breaker = passthroughBreaker,
   retryOptions = { attempts: 1 },
   timeoutMs = 8000,
+  logger = { event() {} },
+  now = () => Date.now(),
 }) {
   return async function handle(req, res) {
+    const start = now();
+    const log = (fields) => logger.event({ type: 'arxiv', durationMs: now() - start, ...fields });
+
     // 1. Rate limit per client.
     const rl = await rateLimiter.check(clientKey(req));
     res.setHeader('X-RateLimit-Limit', rl.limit);
     res.setHeader('X-RateLimit-Remaining', rl.remaining);
     if (!rl.allowed) {
       res.setHeader('Retry-After', rl.retryAfter);
+      log({ status: 429, rateLimited: true });
       return res.status(429).send('Too many requests. Please retry shortly.');
     }
 
@@ -82,9 +88,11 @@ function createGateway({
       res.setHeader('Content-Type', CONTENT_TYPE);
       res.setHeader('Cache-Control', EDGE_CACHE);
       res.setHeader('X-Cache', hit ? 'HIT' : 'MISS');
+      log({ status: 200, cache: hit ? 'HIT' : 'MISS' });
       return res.status(200).send(value.body);
     } catch {
       res.setHeader('Content-Type', CONTENT_TYPE);
+      log({ status: 502 });
       return res.status(502).send('<error>upstream fetch failed</error>');
     }
   };

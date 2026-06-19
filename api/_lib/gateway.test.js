@@ -30,10 +30,10 @@ function countingFetch(opts = {}) {
   return { impl, state };
 }
 
-function buildGateway({ fetch, capacity = 100, breaker, retryOptions, timeoutMs }) {
+function buildGateway({ fetch, capacity = 100, breaker, retryOptions, timeoutMs, logger }) {
   const store = createMemoryStore();
   const rateLimiter = createRateLimiter(store, { capacity, refillPerSec: capacity, now: () => 0 });
-  return createGateway({ store, rateLimiter, fetchImpl: fetch, cacheTtlSeconds: 3600, breaker, retryOptions, timeoutMs });
+  return createGateway({ store, rateLimiter, fetchImpl: fetch, cacheTtlSeconds: 3600, breaker, retryOptions, timeoutMs, logger });
 }
 
 test('first request misses the cache and fetches; second hits and does not fetch', async () => {
@@ -126,6 +126,18 @@ test('rides out a flaky upstream via retry and returns 200', async () => {
   assert.equal(res.statusCode, 200);
   assert.equal(res.headers['x-cache'], 'MISS');
   assert.equal(calls, 3); // failed twice, succeeded on the third
+});
+
+test('logs each request with its cache outcome and status', async () => {
+  const { impl } = countingFetch();
+  const events = [];
+  const handle = buildGateway({ fetch: impl, logger: { event: (e) => events.push(e) } });
+
+  await handle(makeReq({ search_query: 'all:x' }), makeRes());
+
+  assert.equal(events.length, 1);
+  assert.equal(events[0].cache, 'MISS');
+  assert.equal(events[0].status, 200);
 });
 
 test('opens the circuit after repeated upstream failures and stops calling', async () => {

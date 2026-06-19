@@ -28,7 +28,7 @@ function countingFetch() {
 
 test('assembles a working cache-aside handler backed by the in-memory store', async () => {
   const { impl, state } = countingFetch();
-  const handle = createArxivHandler({ env: {}, fetchImpl: impl });
+  const handle = createArxivHandler({ env: {}, fetchImpl: impl, logger: { event() {} } });
   const q = { search_query: 'all:test' };
 
   const r1 = makeRes();
@@ -46,6 +46,7 @@ test('applies rate-limit configuration from env', async () => {
   const handle = createArxivHandler({
     env: { RATE_LIMIT_CAPACITY: '1', RATE_LIMIT_REFILL_PER_SEC: '1' },
     fetchImpl: impl,
+    logger: { event() {} },
   });
   const q = { search_query: 'all:x' };
 
@@ -65,7 +66,7 @@ test('rides out a transient upstream failure (retry wired from defaults)', async
     if (calls < 2) return { ok: false, status: 503, text: async () => '' };
     return { ok: true, status: 200, text: async () => '<feed/>' };
   };
-  const handle = createArxivHandler({ env: {}, fetchImpl: impl });
+  const handle = createArxivHandler({ env: {}, fetchImpl: impl, logger: { event() {} } });
 
   const res = makeRes();
   await handle(makeReq({ search_query: 'all:x' }), res);

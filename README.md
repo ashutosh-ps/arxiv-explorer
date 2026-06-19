@@ -1,276 +1,127 @@
 # arXiv Explorer
 
-A modern, brutalist-style web application for exploring and searching academic papers from arXiv.org. Built with React.js, featuring a clean black & white design, advanced search capabilities, and seamless user experience.
+A full-stack web app for searching and browsing academic papers from arXiv.org — a brutalist
+React frontend backed by a cached, rate-limited, resilient API gateway, JWT authentication, and
+per-user data in Postgres. Deployed on Vercel.
 
-![arXiv Explorer](https://img.shields.io/badge/React-18.x-61DAFB?style=flat&logo=react)
+![React](https://img.shields.io/badge/React-19.x-61DAFB?style=flat&logo=react)
+![CI](https://github.com/ashutosh-ps/arxiv-explorer/actions/workflows/ci.yml/badge.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Status](https://img.shields.io/badge/Status-Active-success)
 
-## 🚀 Features
+## Architecture
 
-### Core Functionality
-- **7 Search Types**: All fields, Title, Author, Category, Abstract, Advanced queries, and Direct ID lookup
-- **Phrase-Matching Optimization**: Intelligent query parsing with automatic quote wrapping for exact phrase searches
-- **155 Academic Categories**: Complete arXiv taxonomy across 16 fields (Computer Science, Physics, Mathematics, Economics, Biology, and more)
-- **Personal Library**: Bookmark papers and track reading history with LocalStorage persistence
-- **Dark/Light Mode**: Full theme support with instant toggle and system preference detection
+![Architecture](docs/architecture.svg)
 
-### Search & Discovery
-- **Infinite Scroll**: Seamlessly load more results as you scroll - no pagination clicks needed
-- **Search History**: Recent searches saved locally with quick re-run functionality
-- **Date Range Filter**: Filter papers by publication date range
-- **Advanced Filters**: Sort by relevance/date, ascending/descending order
+The frontend never calls arXiv directly. A single, framework-agnostic **gateway** (shared by the
+Vercel functions and the local dev server, so dev and prod run identical code) sits in front of
+every request and adds:
 
-### Citation & Export
-- **BibTeX Export**: Export single papers or bulk export all bookmarks as `.bib` files
-- **Citation Formats**: Copy citations in APA, MLA, IEEE, Chicago, or BibTeX format
-- **Citation Preview**: Preview formatted citations before copying
+- **Cache-aside** (TTL + stale-while-revalidate) over arXiv responses — `X-Cache: HIT|MISS`.
+- **Per-client rate limiting** (token bucket) — `429` + `Retry-After` + `X-RateLimit-*`.
+- **Resilience** — retry with backoff + jitter, per-attempt timeout, and a circuit breaker.
 
-### Modern UI/UX
-- **Brutalist Design**: Clean black & white aesthetic with sharp corners and 3D hover effects
-- **80+ Lucide Icons**: Professional icon library replacing traditional emojis
-- **Responsive Layout**: Optimized for desktop, tablet, and mobile devices
-- **3D Interactions**: Cuboid hover effects using CSS transforms and box-shadow
-- **Smooth Animations**: Polished transitions throughout the interface
-- **Error Recovery**: Retry buttons on failed API calls for better reliability
+Identity is **email/password auth** with a hand-rolled HS256 JWT carried in an httpOnly,
+SameSite cookie. Per-user **bookmarks** live in Postgres, scoped to the authenticated user.
+Storage is pluggable: an in-memory adapter (dev/tests, zero setup) or Upstash Redis / Neon
+Postgres when their env vars are present — selected at runtime with no code change.
 
-### Technical Highlights
-- **CORS Solution**: Integrated proxy service for seamless cross-origin API requests
-- **XML Parsing**: Efficient DOMParser implementation for arXiv's Atom feed format
-- **Client-Side Storage**: No backend required - all data persisted in browser
-- **Component Architecture**: 15+ reusable React components with clean separation of concerns
-- **Intersection Observer**: Native browser API for efficient infinite scroll detection
+The design decisions are recorded as ADRs:
 
-## 🛠️ Tech Stack
+1. [Cache-aside + rate limiting](docs/adr/0001-cache-aside-and-rate-limiting.md)
+2. [Resilience: retry, timeout, circuit breaker](docs/adr/0002-resilience-retry-timeout-circuit-breaker.md)
+3. [Auth: JWT in an httpOnly cookie](docs/adr/0003-auth-jwt-cookie.md)
+4. [Per-user bookmarks](docs/adr/0004-per-user-bookmarks.md)
+5. [CI/CD + observability](docs/adr/0005-ci-and-observability.md)
 
-- **Frontend**: React 18.x, React Router v6
-- **Styling**: CSS3 with CSS Variables, CSS Transforms
-- **Icons**: Lucide React
-- **API**: arXiv API (export.arxiv.org)
-- **State Management**: React Context API, LocalStorage
-- **Build Tool**: Create React App
-- **Proxy**: AllOrigins API for CORS handling
+## Backend / API
 
-## 📦 Installation
+All routes live under `api/`. Endpoint handlers are framework-agnostic modules in `api/_lib/`
+(unit-tested without a network or database via dependency injection).
 
-### Prerequisites
-- Node.js (v14 or higher)
-- npm or yarn
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/arxiv` | Cached, rate-limited, resilient proxy to the arXiv query API |
+| `POST` | `/api/auth/signup` · `/api/auth/login` · `/api/auth/logout` | Email/password auth → sets/clears the JWT cookie |
+| `GET` | `/api/auth/me` | Current user (hydrates the session from the cookie) |
+| `GET` `POST` `DELETE` | `/api/bookmarks` | List / add / remove the **authenticated user's** bookmarks |
+| `GET` | `/api/health` | Readiness probe (reports active store/db adapters) |
 
-### Setup
+Every bookmark query is scoped to the user id derived from the cookie — the API never trusts a
+client-supplied id. The gateway emits one structured JSON log line per request to stdout.
 
-1. **Clone the repository**
-```bash
-git clone https://github.com/yourusername/arxiv-explorer.git
-cd arxiv-explorer
-```
+## Features
 
-2. **Install dependencies**
+- **7 search types** (all fields, title, author, category, abstract, advanced, direct ID) with
+  phrase-match optimization, infinite scroll, date-range and sort filters, and search history.
+- **155 arXiv categories** across 16 fields; a daily-rotating "Featured Papers" topic.
+- **Per-user library** — bookmark papers to your account (synced across devices via Postgres);
+  reading history (local).
+- **Citations** — copy in APA, MLA, IEEE, Chicago, or BibTeX; bulk BibTeX export.
+- **Dark/light mode** and a responsive brutalist UI.
+
+## Tech stack
+
+- **Frontend:** React 19, React Router v7, CSS variables, Lucide icons (Create React App).
+- **Backend:** Vercel serverless functions (Node), framework-agnostic handlers in `api/_lib/`.
+- **Data:** Neon Postgres (`@neondatabase/serverless`), Upstash Redis (cache/rate-limit) —
+  both optional, with in-memory fallbacks.
+- **Auth:** bcryptjs + hand-rolled HS256 JWT (`node:crypto`), httpOnly cookie.
+- **Tests:** `node:test` (backend) + Jest (frontend). **CI:** GitHub Actions.
+
+## Getting started
+
 ```bash
 npm install
+npm start        # http://localhost:3000
 ```
 
-3. **Start development server**
+No environment variables are required for local dev — the app runs on in-memory adapters
+(auth and bookmarks work in a single dev process). See [`.env.example`](.env.example) to wire
+real Postgres/Redis locally.
+
+## Testing
+
 ```bash
-npm start
+npm run test:api   # backend (node:test) — store, cache, rate limit, resilience, auth, bookmarks
+npm test           # frontend (Jest) — contexts and utilities
+npm run build      # production build (also lints)
 ```
 
-The app will open at [http://localhost:3000](http://localhost:3000)
+The backend was built test-first; logic modules take injected clocks/fetch/sql/writers so they
+run with no network or database.
 
-4. **Build for production**
-```bash
-npm run build
-```
+## Deployment (Vercel)
 
-## 🎯 Usage
+1. Create a **Neon** Postgres database and copy its connection string.
+2. In Vercel → Settings → Environment Variables, set:
+   - `DATABASE_URL` — the Neon connection string.
+   - `JWT_SECRET` — a long random value (`openssl rand -base64 32`).
+   - *(optional)* `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` for shared cache/rate limiting.
+3. Create the tables: `DATABASE_URL="…" npm run db:migrate`.
+4. Redeploy (env-var changes require a new deployment).
 
-### Search for Papers
-1. Navigate to the **Search** page
-2. Select your search type (Title, Author, Category, etc.)
-3. Enter your query (e.g., "Attention Is All You Need")
-4. Apply filters for results per page and sorting options
-5. Click on any paper to view full details
+Without `DATABASE_URL`, the app falls back to the in-memory store, which on serverless is
+per-instance — fine for a demo, not for real persistence.
 
-### Browse Categories
-1. Visit the **Categories** page
-2. Categories are organized by field (Computer Science, Physics, Mathematics, etc.)
-3. Click any group header to expand/collapse categories
-4. Click a category to view papers with infinite scroll support
-5. Each category shows the full arXiv taxonomy (155 categories across 16 fields)
-
-### Manage Your Library
-1. Bookmark papers by clicking the star icon
-2. View all bookmarked papers in **My Library** → Bookmarks
-3. Check your reading history in **My Library** → History
-4. Export all bookmarks as BibTeX file for citation managers
-5. Clear history anytime with one click
-
-### Copy Citations
-1. Open any paper by clicking on it
-2. Click the **Cite** button in the paper modal
-3. Select your preferred format (APA, MLA, IEEE, Chicago, BibTeX)
-4. Preview the formatted citation
-5. Click **Copy** to copy to clipboard
-
-### Dark Mode
-- Toggle dark/light mode using the moon/sun icon in the header
-- Theme preference is automatically saved
-
-## 🏗️ Project Structure
+## Project structure
 
 ```
-arxiv-explorer/
-├── public/
-│   ├── index.html
-│   └── manifest.json
-├── src/
-│   ├── components/
-│   │   ├── Header.js          # Navigation header with search and theme toggle
-│   │   ├── PaperCard.js       # Paper preview card component
-│   │   ├── PaperModal.js      # Full paper details modal with citations
-│   │   └── SearchHistory.js   # Recent searches dropdown component
-│   ├── context/
-│   │   └── DarkModeContext.js # Theme state management
-│   ├── data/
-│   │   └── categories.js      # Complete arXiv taxonomy (155 categories)
-│   ├── pages/
-│   │   ├── HomePage.js        # Landing page with featured papers
-│   │   ├── SearchPage.js      # Advanced search with infinite scroll
-│   │   ├── CategoriesPage.js  # Category browser with collapsible groups
-│   │   └── LibraryPage.js     # Bookmarks, history, and BibTeX export
-│   ├── services/
-│   │   ├── arxivApi.js        # arXiv API integration layer
-│   │   ├── citationService.js # Citation formatting (APA, MLA, IEEE, etc.)
-│   │   └── storageService.js  # LocalStorage for bookmarks, history, search history
-│   ├── App.js                 # Main app component with routing
-│   ├── styles.css             # Global brutalist design system
-│   └── index.js               # App entry point
-├── package.json
-└── README.md
+api/
+  arxiv.js, bookmarks.js, health.js, auth/*.js   # Vercel function entry points
+  _lib/
+    store/        # cache/rate-limit store: memory + upstash adapters
+    db/           # user/bookmark store: memory + postgres adapters + schema.sql
+    auth/         # password (bcrypt), jwt (HS256), cookie, require-auth
+    handlers/     # auth, bookmarks, health
+    cache.js, rate-limit.js, resilience.js, gateway.js, logger.js, *-app.js
+src/
+  components/  context/ (Auth, Bookmarks, DarkMode)  pages/  services/  data/
+scripts/migrate.js          # applies api/_lib/db/schema.sql
+.github/workflows/ci.yml    # lint + test + build on push/PR
+docs/adr/                   # architecture decision records
 ```
 
-## 🔑 Key Features Explained
+## License
 
-### Phrase-Matching Search
-The app intelligently wraps multi-word queries in quotes to ensure exact phrase matching:
-- Query: `Attention Is All You Need`
-- API: `ti:"Attention Is All You Need"`
-- Result: Exact title match instead of OR-separated terms
-
-### Infinite Scroll
-Uses Intersection Observer API for efficient scroll detection:
-```javascript
-const observer = new IntersectionObserver((entries) => {
-  if (entries[0].isIntersecting && hasMore) {
-    loadMore();
-  }
-}, { threshold: 0.1 });
-```
-
-### Citation Formats
-Generate citations in multiple academic formats:
-- **APA**: Author, A. A. (Year). Title. *arXiv preprint*. https://arxiv.org/abs/ID
-- **MLA**: Author. "Title." *arXiv*, Year, arxiv.org/abs/ID.
-- **IEEE**: A. Author, "Title," *arXiv:ID*, Year.
-- **Chicago**: Author. "Title." arXiv preprint arXiv:ID (Year). URL.
-- **BibTeX**: Full `@article{}` entry for LaTeX
-
-### 3D Hover Effects
-Using CSS transforms and box-shadow to create cuboid depth:
-```css
-.card:hover {
-  transform: translate(4px, 4px);
-  box-shadow: -4px -4px 0 var(--border-color);
-}
-```
-
-### CORS Proxy Solution
-Since arXiv API doesn't support CORS, we use AllOrigins:
-```javascript
-const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(arxivUrl)}`;
-```
-
-### Complete arXiv Taxonomy
-All 155 categories organized into 16 groups:
-- Computer Science (40 categories)
-- Mathematics (32 categories)
-- Physics (22 categories)
-- Astrophysics (6 categories)
-- Condensed Matter (9 categories)
-- And 11 more fields...
-
-## 🎨 Design System
-
-### Color Scheme
-- **Light Mode**: White background (#ffffff), Black text (#000000)
-- **Dark Mode**: Black background (#000000), White text (#ffffff)
-- **Borders**: 2px solid, 0 border-radius for sharp corners
-
-### Typography
-- System font stack for optimal performance
-- Clear hierarchy with size and weight variations
-
-### Icons
-- Lucide React icons throughout
-- Consistent 16px-48px sizing based on context
-
-## 🚧 Development
-
-### Available Scripts
-
-- `npm start` - Run development server
-- `npm run build` - Create production build
-- `npm test` - Run test suite (when configured)
-
-### Code Style
-- Functional React components with Hooks
-- Component-based architecture
-- CSS Variables for theming
-- Clean, commented code
-
-## 📝 API Reference
-
-The app uses the [arXiv API](https://arxiv.org/help/api/index):
-
-**Base URL**: `https://export.arxiv.org/api/query`
-
-**Search Query Prefixes**:
-- `all:` - Search all fields
-- `ti:` - Search titles
-- `au:` - Search authors
-- `abs:` - Search abstracts
-- `cat:` - Search categories
-
-**Example Query**:
-```
-https://export.arxiv.org/api/query?search_query=ti:"Machine Learning"&start=0&max_results=10
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- [arXiv.org](https://arxiv.org) for providing the free API and academic paper archive
-- [Lucide Icons](https://lucide.dev/) for the beautiful icon library
-- [AllOrigins](https://allorigins.win/) for CORS proxy service
-- [Create React App](https://create-react-app.dev/) for the project setup
-
-## 📧 Contact
-
-For questions or feedback, please open an issue on GitHub.
-
----
-
-**Note**: This is a frontend-only application. All data is fetched from arXiv's public API and stored locally in your browser. No backend server is required.
+MIT — see [LICENSE](LICENSE). Built on the free [arXiv API](https://arxiv.org/help/api/index)
+and [Lucide](https://lucide.dev/).

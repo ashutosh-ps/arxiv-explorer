@@ -1,9 +1,11 @@
 // Local dev API router. The CRA dev server runs this in Node, so it serves the exact same
 // handlers as the production Vercel functions — keeping dev and prod behaviour identical.
 const { createArxivHandler } = require('../api/_lib/create-handler');
+const { createStore } = require('../api/_lib/store');
 const { createDb } = require('../api/_lib/db');
 const { createAuthHandlers } = require('../api/_lib/handlers/auth');
 const { createBookmarksHandler } = require('../api/_lib/handlers/bookmarks');
+const { createHealthHandler } = require('../api/_lib/handlers/health');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-insecure-secret-change-me';
 
@@ -33,4 +35,7 @@ module.exports = function (app) {
   app.get('/api/bookmarks', (req, res) => bookmarks(req, res));
   app.post('/api/bookmarks', jsonBody, (req, res) => bookmarks(req, res));
   app.delete('/api/bookmarks', (req, res) => bookmarks(req, res));
+
+  const health = createHealthHandler({ store: createStore({}), db });
+  app.get('/api/health', (req, res) => health(req, res));
 };
