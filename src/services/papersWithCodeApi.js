@@ -4,11 +4,17 @@
  * Contains 300K+ paper-to-code links with arXiv IDs
  */
 
+import { createCircuitBreaker } from '../lib/circuit-breaker';
+
 const DATASET_API_URL = 'https://datasets-server.huggingface.co/filter';
 const DATASET_NAME = 'pwc-archive/links-between-paper-and-code';
 
 // Cache for code links to avoid repeated API calls
 const codeLinksCache = new Map();
+
+// Shared breaker: the Papers-with-Code dataset is unreliable (often 422s). Once it fails
+// repeatedly, stop calling it for a cooldown instead of hammering it on every paper card.
+const codeLinksBreaker = createCircuitBreaker({ failureThreshold: 3, cooldownMs: 60000 });
 
 /**
  * Extract arXiv ID from various URL formats or ID strings
@@ -31,7 +37,7 @@ export const extractArxivId = (idOrUrl) => {
  * @param {string} arxivId - The arXiv ID (e.g., "1706.03762")
  * @returns {Promise<Array>} - Array of repository objects
  */
-export const getCodeLinks = async (arxivId) => {
+export const getCodeLinks = async (arxivId, { fetchImpl = fetch, breaker = codeLinksBreaker } = {}) => {
   const cleanId = extractArxivId(arxivId);
   if (!cleanId) {
     console.warn('Invalid arXiv ID:', arxivId);
@@ -44,39 +50,46 @@ export const getCodeLinks = async (arxivId) => {
   }
 
   try {
-    const url = `${DATASET_API_URL}?dataset=${encodeURIComponent(DATASET_NAME)}&config=default&split=train&where=paper_arxiv_id%3D%27${cleanId}%27&length=50`;
+    const repos = await breaker.exec(async () => {
+      const url = `${DATASET_API_URL}?dataset=${encodeURIComponent(DATASET_NAME)}&config=default&split=train&where=paper_arxiv_id%3D%27${cleanId}%27&length=50`;
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+      const response = await fetchImpl(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    const data = await response.json();
-    const rows = data.rows || [];
+      const data = await response.json();
+      const rows = data.rows || [];
 
-    // Transform the data into a cleaner format
-    const repos = rows.map(r => ({
-      url: r.row.repo_url,
-      isOfficial: r.row.is_official,
-      mentionedInPaper: r.row.mentioned_in_paper,
-      mentionedInGithub: r.row.mentioned_in_github,
-      framework: r.row.framework || 'unknown',
-      paperTitle: r.row.paper_title,
-    }));
+      // Transform the data into a cleaner format
+      const transformed = rows.map(r => ({
+        url: r.row.repo_url,
+        isOfficial: r.row.is_official,
+        mentionedInPaper: r.row.mentioned_in_paper,
+        mentionedInGithub: r.row.mentioned_in_github,
+        framework: r.row.framework || 'unknown',
+        paperTitle: r.row.paper_title,
+      }));
 
-    // Sort: official repos first, then by framework
-    repos.sort((a, b) => {
-      if (a.isOfficial && !b.isOfficial) return -1;
-      if (!a.isOfficial && b.isOfficial) return 1;
-      return 0;
+      // Sort: official repos first, then by framework
+      transformed.sort((a, b) => {
+        if (a.isOfficial && !b.isOfficial) return -1;
+        if (!a.isOfficial && b.isOfficial) return 1;
+        return 0;
+      });
+
+      return transformed;
     });
 
-    // Cache the results
+    // Cache only successful lookups.
     codeLinksCache.set(cleanId, repos);
-
     return repos;
   } catch (error) {
-    console.error('Error fetching code links:', error);
+    // Stay quiet when the breaker is open — that's the whole point of not hammering a
+    // known-dead endpoint. Log only genuine fetch failures (capped by the breaker opening).
+    if (error.code !== 'CIRCUIT_OPEN') {
+      console.error('Error fetching code links:', error.message);
+    }
     return [];
   }
 };

@@ -57,3 +57,19 @@ test('applies rate-limit configuration from env', async () => {
   await handle(makeReq(q), limited);
   assert.equal(limited.statusCode, 429);
 });
+
+test('rides out a transient upstream failure (retry wired from defaults)', async () => {
+  let calls = 0;
+  const impl = async () => {
+    calls++;
+    if (calls < 2) return { ok: false, status: 503, text: async () => '' };
+    return { ok: true, status: 200, text: async () => '<feed/>' };
+  };
+  const handle = createArxivHandler({ env: {}, fetchImpl: impl });
+
+  const res = makeRes();
+  await handle(makeReq({ search_query: 'all:x' }), res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(calls, 2); // first 503 retried, second succeeded
+});

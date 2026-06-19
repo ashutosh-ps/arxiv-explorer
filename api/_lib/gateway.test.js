@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createMemoryStore } = require('./store/memory-store');
 const { createRateLimiter } = require('./rate-limit');
+const { createCircuitBreaker } = require('./resilience');
 const { createGateway } = require('./gateway');
 
 function makeRes() {
@@ -29,10 +30,10 @@ function countingFetch(opts = {}) {
   return { impl, state };
 }
 
-function buildGateway({ fetch, capacity = 100 }) {
+function buildGateway({ fetch, capacity = 100, breaker, retryOptions, timeoutMs }) {
   const store = createMemoryStore();
   const rateLimiter = createRateLimiter(store, { capacity, refillPerSec: capacity, now: () => 0 });
-  return createGateway({ store, rateLimiter, fetchImpl: fetch, cacheTtlSeconds: 3600 });
+  return createGateway({ store, rateLimiter, fetchImpl: fetch, cacheTtlSeconds: 3600, breaker, retryOptions, timeoutMs });
 }
 
 test('first request misses the cache and fetches; second hits and does not fetch', async () => {
@@ -108,4 +109,37 @@ test('upstream failure returns 502 and is not cached', async () => {
   await handle(makeReq({ search_query: 'all:x' }), res2);
   assert.equal(res2.statusCode, 502);
   assert.equal(state.calls, 2); // failure was not cached; retried
+});
+
+test('rides out a flaky upstream via retry and returns 200', async () => {
+  let calls = 0;
+  const impl = async () => {
+    calls++;
+    if (calls < 3) return { ok: false, status: 500, text: async () => '' };
+    return { ok: true, status: 200, text: async () => '<feed><entry/></feed>' };
+  };
+  const handle = buildGateway({ fetch: impl, retryOptions: { attempts: 3, jitter: false, sleep: async () => {} } });
+
+  const res = makeRes();
+  await handle(makeReq({ search_query: 'all:x' }), res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.headers['x-cache'], 'MISS');
+  assert.equal(calls, 3); // failed twice, succeeded on the third
+});
+
+test('opens the circuit after repeated upstream failures and stops calling', async () => {
+  let calls = 0;
+  const impl = async () => { calls++; return { ok: false, status: 500, text: async () => '' }; };
+  const breaker = createCircuitBreaker({ failureThreshold: 2, cooldownMs: 60000, now: () => 0 });
+  const handle = buildGateway({ fetch: impl, breaker, retryOptions: { attempts: 1 } });
+  const q = { search_query: 'all:x' };
+
+  for (let i = 0; i < 3; i++) {
+    const res = makeRes();
+    await handle(makeReq(q), res);
+    assert.equal(res.statusCode, 502);
+  }
+
+  assert.equal(calls, 2); // 3rd request short-circuited by the open breaker
 });
