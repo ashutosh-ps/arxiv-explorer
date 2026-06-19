@@ -9,6 +9,11 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children, api = defaultApi }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Auth-modal visibility lives here so any component (e.g. a bookmark button) can prompt
+  // sign-in via openAuth().
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const openAuth = useCallback(() => setAuthModalOpen(true), []);
+  const closeAuth = useCallback(() => setAuthModalOpen(false), []);
 
   useEffect(() => {
     let active = true;
@@ -37,7 +42,7 @@ export const AuthProvider = ({ children, api = defaultApi }) => {
   }, [api]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signup, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, signup, login, logout, authModalOpen, openAuth, closeAuth }}>
       {children}
     </AuthContext.Provider>
   );

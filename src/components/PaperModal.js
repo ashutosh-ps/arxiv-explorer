@@ -1,6 +1,8 @@
 import React from 'react';
 import { Star, FileText, ExternalLink, Share2, X, Quote, Download, Copy, Check, ChevronDown, Code, Github, Loader } from 'lucide-react';
-import { isBookmarked, addBookmark, removeBookmark, addToHistory } from '../services/storageService';
+import { addToHistory } from '../services/storageService';
+import { useAuth } from '../context/AuthContext';
+import { useBookmarks } from '../context/BookmarksContext';
 import { getCategoryColor } from '../data/categories';
 import {
   generateCitation,
@@ -16,7 +18,9 @@ import {
 } from '../services/papersWithCodeApi';
 
 const PaperModal = ({ paper, onClose }) => {
-  const [bookmarked, setBookmarked] = React.useState(isBookmarked(paper.id));
+  const { user, openAuth } = useAuth();
+  const { isBookmarked, addBookmark, removeBookmark } = useBookmarks();
+  const bookmarked = isBookmarked(paper.id);
   const [showFullAbstract, setShowFullAbstract] = React.useState(false);
   const [showCitationDropdown, setShowCitationDropdown] = React.useState(false);
   const [selectedCitationFormat, setSelectedCitationFormat] = React.useState('bibtex');
@@ -52,12 +56,14 @@ const PaperModal = ({ paper, onClose }) => {
   }, [paper]);
 
   const handleBookmark = () => {
+    if (!user) {
+      openAuth(); // bookmarking requires an account
+      return;
+    }
     if (bookmarked) {
       removeBookmark(paper.id);
-      setBookmarked(false);
     } else {
       addBookmark(paper);
-      setBookmarked(true);
     }
   };
 

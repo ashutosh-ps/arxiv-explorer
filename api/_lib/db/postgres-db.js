@@ -35,6 +35,26 @@ function createPostgresDb({ sql }) {
         FROM users WHERE id = ${id}::bigint`;
       return rows[0] || null;
     },
+
+    async listBookmarks(userId) {
+      const rows = await sql`
+        SELECT paper, created_at AS "savedAt" FROM bookmarks
+        WHERE user_id = ${userId}::bigint
+        ORDER BY created_at DESC`;
+      return rows.map((r) => ({ ...r.paper, savedAt: r.savedAt }));
+    },
+
+    async addBookmark(userId, paper) {
+      await sql`
+        INSERT INTO bookmarks (user_id, paper_id, paper)
+        VALUES (${userId}::bigint, ${paper.id}, ${JSON.stringify(paper)}::jsonb)
+        ON CONFLICT (user_id, paper_id) DO NOTHING`;
+    },
+
+    async removeBookmark(userId, paperId) {
+      await sql`
+        DELETE FROM bookmarks WHERE user_id = ${userId}::bigint AND paper_id = ${paperId}`;
+    },
   };
 }
 

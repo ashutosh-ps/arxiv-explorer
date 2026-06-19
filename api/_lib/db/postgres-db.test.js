@@ -48,6 +48,29 @@ test('findUserByEmail aliases columns to camelCase to match the memory adapter',
   assert.match(sql.calls[0].text, /password_hash AS "passwordHash"/i);
 });
 
+test('listBookmarks selects the user\'s bookmarks newest-first and flattens paper + savedAt', async () => {
+  const sql = fakeSql([{ paper: { id: 'p1', title: 'T' }, savedAt: '2020-01-01' }]);
+  const list = await createPostgresDb({ sql }).listBookmarks('7');
+  assert.deepEqual(list, [{ id: 'p1', title: 'T', savedAt: '2020-01-01' }]);
+  assert.match(sql.calls[0].text, /SELECT[\s\S]*FROM bookmarks[\s\S]*WHERE user_id = \?::bigint[\s\S]*ORDER BY created_at DESC/i);
+  assert.deepEqual(sql.calls[0].values, ['7']);
+});
+
+test('addBookmark inserts scoped to the user with ON CONFLICT DO NOTHING (idempotent)', async () => {
+  const sql = fakeSql([]);
+  const paper = { id: 'p1', title: 'T' };
+  await createPostgresDb({ sql }).addBookmark('7', paper);
+  assert.match(sql.calls[0].text, /INSERT INTO bookmarks[\s\S]*ON CONFLICT[\s\S]*DO NOTHING/i);
+  assert.deepEqual(sql.calls[0].values, ['7', 'p1', JSON.stringify(paper)]);
+});
+
+test('removeBookmark deletes scoped to the user and the paper', async () => {
+  const sql = fakeSql([]);
+  await createPostgresDb({ sql }).removeBookmark('7', 'p1');
+  assert.match(sql.calls[0].text, /DELETE FROM bookmarks WHERE user_id = \?::bigint AND paper_id = \?/i);
+  assert.deepEqual(sql.calls[0].values, ['7', 'p1']);
+});
+
 test('createUser maps a unique-violation to EMAIL_EXISTS', async () => {
   const sql = () => Promise.reject(new Error('duplicate key value violates unique constraint "users_email_key"'));
   const db = createPostgresDb({ sql });

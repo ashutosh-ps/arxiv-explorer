@@ -7,8 +7,7 @@ import AuthModal from './AuthModal';
 
 const Header = () => {
   const { darkMode, toggleDarkMode } = useDarkMode();
-  const { user, logout } = useAuth();
-  const [authOpen, setAuthOpen] = React.useState(false);
+  const { user, logout, authModalOpen, openAuth, closeAuth } = useAuth();
   const [searchQuery, setSearchQuery] = React.useState('');
   const navigate = useNavigate();
 
@@ -55,11 +54,11 @@ const Header = () => {
               <button className="auth-action" onClick={logout}>Log out</button>
             </span>
           ) : (
-            <button className="auth-action" onClick={() => setAuthOpen(true)}>Sign in</button>
+            <button className="auth-action" onClick={openAuth}>Sign in</button>
           )}
         </nav>
       </div>
-      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
+      {authModalOpen && <AuthModal onClose={closeAuth} />}
     </header>
   );
 };

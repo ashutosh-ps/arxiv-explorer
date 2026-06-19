@@ -1,11 +1,14 @@
 import React from 'react';
 import { Star, Calendar, Eye, FileText, ExternalLink, Code } from 'lucide-react';
-import { isBookmarked, addBookmark, removeBookmark } from '../services/storageService';
+import { useAuth } from '../context/AuthContext';
+import { useBookmarks } from '../context/BookmarksContext';
 import { getCategoryColor } from '../data/categories';
 import { getCodeLinks, extractArxivId } from '../services/papersWithCodeApi';
 
 const PaperCard = ({ paper, onPaperClick }) => {
-  const [bookmarked, setBookmarked] = React.useState(isBookmarked(paper.id));
+  const { user, openAuth } = useAuth();
+  const { isBookmarked, addBookmark, removeBookmark } = useBookmarks();
+  const bookmarked = isBookmarked(paper.id);
   const [hasCode, setHasCode] = React.useState(false);
 
   React.useEffect(() => {
@@ -19,12 +22,14 @@ const PaperCard = ({ paper, onPaperClick }) => {
 
   const handleBookmark = (e) => {
     e.stopPropagation();
+    if (!user) {
+      openAuth(); // bookmarking requires an account
+      return;
+    }
     if (bookmarked) {
       removeBookmark(paper.id);
-      setBookmarked(false);
     } else {
       addBookmark(paper);
-      setBookmarked(true);
     }
   };
 

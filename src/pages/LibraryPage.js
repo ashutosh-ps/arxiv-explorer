@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Star, ScrollText, Trash2, FileText, FileCode } from 'lucide-react';
-import { getBookmarks, getHistory, clearHistory } from '../services/storageService';
+import { getHistory, clearHistory } from '../services/storageService';
+import { useAuth } from '../context/AuthContext';
+import { useBookmarks } from '../context/BookmarksContext';
 import { exportPapersAsBibtex } from '../services/citationService';
 import PaperCard from '../components/PaperCard';
 import PaperModal from '../components/PaperModal';
 
 const LibraryPage = () => {
+  const { user, openAuth } = useAuth();
+  const { bookmarks } = useBookmarks();
   const [activeTab, setActiveTab] = useState('bookmarks');
-  const [bookmarks, setBookmarks] = useState([]);
   const [history, setHistory] = useState([]);
   const [selectedPaper, setSelectedPaper] = useState(null);
 
@@ -16,7 +19,6 @@ const LibraryPage = () => {
   }, []);
 
   const loadData = () => {
-    setBookmarks(getBookmarks());
     setHistory(getHistory());
   };
 
@@ -81,7 +83,14 @@ const LibraryPage = () => {
 
       {activeTab === 'bookmarks' && (
         <div className="library-content">
-          {bookmarks.length === 0 ? (
+          {!user ? (
+            <div className="empty-state">
+              <span className="empty-icon"><Star size={48} /></span>
+              <h3>Sign in to view your library</h3>
+              <p>Your saved papers sync to your account across devices.</p>
+              <button className="auth-action" onClick={openAuth}>Sign in</button>
+            </div>
+          ) : bookmarks.length === 0 ? (
             <div className="empty-state">
               <span className="empty-icon"><Star size={48} /></span>
               <h3>No bookmarks yet</h3>

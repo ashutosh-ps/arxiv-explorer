@@ -1,56 +1,13 @@
 // LocalStorage service for managing saved papers, history, and preferences
 
 const STORAGE_KEYS = {
-  BOOKMARKS: 'arxiv_bookmarks',
   HISTORY: 'arxiv_history',
   SEARCH_HISTORY: 'arxiv_search_history',
   DARK_MODE: 'arxiv_dark_mode',
   COLLECTIONS: 'arxiv_collections'
 };
 
-// Bookmarks
-export const getBookmarks = () => {
-  try {
-    const bookmarks = localStorage.getItem(STORAGE_KEYS.BOOKMARKS);
-    return bookmarks ? JSON.parse(bookmarks) : [];
-  } catch (error) {
-    console.error('Error reading bookmarks:', error);
-    return [];
-  }
-};
-
-export const addBookmark = (paper) => {
-  try {
-    const bookmarks = getBookmarks();
-    const exists = bookmarks.find(p => p.id === paper.id);
-    if (!exists) {
-      const newBookmarks = [{ ...paper, savedAt: new Date().toISOString() }, ...bookmarks];
-      localStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(newBookmarks));
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error adding bookmark:', error);
-    return false;
-  }
-};
-
-export const removeBookmark = (paperId) => {
-  try {
-    const bookmarks = getBookmarks();
-    const filtered = bookmarks.filter(p => p.id !== paperId);
-    localStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(filtered));
-    return true;
-  } catch (error) {
-    console.error('Error removing bookmark:', error);
-    return false;
-  }
-};
-
-export const isBookmarked = (paperId) => {
-  const bookmarks = getBookmarks();
-  return bookmarks.some(p => p.id === paperId);
-};
+// Bookmarks moved to the server (per-user) — see BookmarksContext / api/bookmarks.
 
 // History
 export const getHistory = () => {

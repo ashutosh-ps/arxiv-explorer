@@ -12,8 +12,15 @@ async function main() {
   }
   const sql = neon(url);
   const schema = fs.readFileSync(path.join(__dirname, '..', 'api', '_lib', 'db', 'schema.sql'), 'utf8');
-  await sql.query(schema);
-  console.log('Migration applied: users table is ready.');
+  // The Neon HTTP driver runs one statement per request, so apply each separately.
+  const statements = schema
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  for (const statement of statements) {
+    await sql.query(statement);
+  }
+  console.log(`Migration applied: ${statements.length} statements (users, bookmarks).`);
 }
 
 main().catch((err) => {

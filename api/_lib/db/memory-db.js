@@ -4,6 +4,7 @@
 function createMemoryDb() {
   const byId = new Map();
   const byEmail = new Map();
+  const bookmarksByUser = new Map(); // userId -> [{ paper, savedAt }], newest first
   let seq = 0;
 
   return {
@@ -33,6 +34,28 @@ function createMemoryDb() {
 
     async findUserById(id) {
       return byId.get(String(id)) || null;
+    },
+
+    async listBookmarks(userId) {
+      const list = bookmarksByUser.get(String(userId)) || [];
+      return list.map((b) => ({ ...b.paper, savedAt: b.savedAt }));
+    },
+
+    async addBookmark(userId, paper) {
+      const key = String(userId);
+      const list = bookmarksByUser.get(key) || [];
+      const existing = list.find((b) => b.paper.id === paper.id);
+      if (existing) return existing; // idempotent
+      const record = { paper, savedAt: new Date().toISOString() };
+      list.unshift(record);
+      bookmarksByUser.set(key, list);
+      return record;
+    },
+
+    async removeBookmark(userId, paperId) {
+      const key = String(userId);
+      const list = bookmarksByUser.get(key) || [];
+      bookmarksByUser.set(key, list.filter((b) => b.paper.id !== paperId));
     },
   };
 }

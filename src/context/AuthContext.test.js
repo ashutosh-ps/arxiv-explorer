@@ -42,3 +42,17 @@ test('login updates the current user', async () => {
   await act(async () => { screen.getByText('login').click(); });
   await waitFor(() => expect(screen.getByTestId('user').textContent).toBe('a@example.com'));
 });
+
+test('openAuth and closeAuth toggle the auth-modal flag', async () => {
+  const api = fakeApi();
+  let ctx;
+  function Capture() { ctx = useAuth(); return null; }
+  render(<AuthProvider api={api}><Capture /></AuthProvider>);
+  await waitFor(() => expect(ctx.loading).toBe(false));
+
+  expect(ctx.authModalOpen).toBe(false);
+  await act(async () => { ctx.openAuth(); });
+  expect(ctx.authModalOpen).toBe(true);
+  await act(async () => { ctx.closeAuth(); });
+  expect(ctx.authModalOpen).toBe(false);
+});
