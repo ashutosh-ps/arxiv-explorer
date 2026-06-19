@@ -2,9 +2,13 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BookOpen, Search, Sun, Moon } from 'lucide-react';
 import { useDarkMode } from '../context/DarkModeContext';
+import { useAuth } from '../context/AuthContext';
+import AuthModal from './AuthModal';
 
 const Header = () => {
   const { darkMode, toggleDarkMode } = useDarkMode();
+  const { user, logout } = useAuth();
+  const [authOpen, setAuthOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   const navigate = useNavigate();
 
@@ -45,8 +49,17 @@ const Header = () => {
           <button className="dark-mode-toggle" onClick={toggleDarkMode} title="Toggle dark mode">
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
+          {user ? (
+            <span className="auth-status">
+              <span className="auth-email" title={user.email}>{user.email}</span>
+              <button className="auth-action" onClick={logout}>Log out</button>
+            </span>
+          ) : (
+            <button className="auth-action" onClick={() => setAuthOpen(true)}>Sign in</button>
+          )}
         </nav>
       </div>
+      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
     </header>
   );
 };
